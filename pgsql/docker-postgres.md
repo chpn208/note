@@ -80,3 +80,69 @@
 
    
 
+   +++
+
+   
+
+   2. pg_hba.conf
+
+   指定了允许哪些用户以何种方式连接到PostgreSQL。针对该文件的修改可动态生效。
+
+```sh
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# "local" is for Unix domain socket connections only
+local   all             all                                     trust
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            trust # 1
+# IPv6 local connections:
+host    all             all             ::1/128                 trust #
+# Allow replication connections from localhost, by a user with the
+# replication privilege.
+#local   replication     postgres                                trust
+#host    replication     postgres        127.0.0.1/32            trust
+#host    replication     postgres        ::1/128                 trust
+```
+
+1. 身份验证模式，一般有ident、trust、md5以及password。**这些都是干啥的？**
+   * trust 这是最不安全的 ，允许用户“自证清白”（不用密码就连接到数据库）。只要源端IP地址、连接用户名、要访问的database名都与该条规则切尔西，就可以连上来。
+   *  md5 要求连接发起者携带用md5算法加密的密码
+   * password 明文密码验证，不推荐
+   * ident 系统会将请求发起者的操作系统用户映射为PostgreSQL数据库内部用户，并以该内部用户的权限登录，且无需提供密码---> 操作系统用户映射为数据库用户
+
+
+
+3.  配置文件的重新加载
+
+   ``` sh
+   pg_ctl reload -D you_data_directory_here
+   ```
+
+   
+
+#### 2.2 连接管理
+
+可用于解决慢查询，锁库锁表等问题
+
+1. 查出活动连接列表及其进程ID
+
+   ```sql
+   SELECT * FROM pg_stat_activity;
+   ```
+
+2. 取消连接上的活动查询
+
+   ```sql
+   SELECT pg_cancel_backend(procid);
+   ```
+
+3. 终止该连接
+
+   ```sql
+   SELECT pg_terminate_backend(procid);
+   ```
+
+   如果你未停止某个连接上正在执行的语句就直接终止该连接，那么这些语句此时也会被停止掉
+
+#### 2.3 角色
+
